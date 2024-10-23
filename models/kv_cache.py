@@ -289,7 +289,7 @@ class ShadowKVCache:
         chunk_attn = torch.einsum('bhgqd,bhdc->bhgqc', query_states.view(-1, self.num_key_value_heads, self.num_key_value_groups, self.incoming_q_len, self.head_dim), self.k_landmark[layer_idx].transpose(2, 3)).squeeze(2) / math.sqrt(128)
         chunk_attn = nn.functional.softmax(chunk_attn, dim=-1, dtype=torch.float32).to(self.dtype) # [bsz, 8, 4, q_len, chunks]
         chunk_attn = chunk_attn.sum(dim = -2) # [bsz, 8, 4, chunks]
-        if self.num_key_value_groups > 1: # TODO: fix MHA here
+        if self.num_key_value_groups > 1:
             chunk_attn, _ = torch.max(chunk_attn, dim=-2) # [bsz, 8, chunks]
         merged_results = torch.topk(chunk_attn, k=self.select_sets, dim=-1).indices # [bsz, 8, select_sets(256)]
 

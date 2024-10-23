@@ -1,5 +1,5 @@
 <div align="center">
-<h1><img src="static/images/ShadowKV.png" height="40px"> ShadowKV</h1>
+<h1><img src="static/images/ShadowKV.png" height="40px"> ShadowKV: KV Cache in Shadows for High-Throughput Long-Context LLM Inference</h1>
 </div>
 <div align="center">
 <b><a href="https://github.com/preminstrel">Hanshi Sun</a></b><sup>1,2</sup>,
