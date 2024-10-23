@@ -7,6 +7,7 @@
 <b><a href="https://sites.google.com/view/wenleibao/">Wenlei Bao</a></b><sup>2</sup>,
 <b><a href="https://sizezheng.github.io/">Size Zheng</a></b><sup>2</sup>,
 <b><a href="https://zheng-ningxin.github.io/">Ningxin Zheng</a></b><sup>2</sup>,
+<b><a href="https://scholar.google.com/citations?user=ZMfk2F8AAAAJ&hl=zh-CN">Xin Liu</a></b><sup>2</sup>,
 <br>
 <b><a href="https://github.com/preminstrel">Harry Dong</a></b><sup>1</sup>,
 <b><a href="https://github.com/preminstrel">Yuejie Chi</a></b><sup>1</sup>,
