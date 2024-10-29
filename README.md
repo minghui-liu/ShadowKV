@@ -11,9 +11,9 @@
 <b><a href="https://zheng-ningxin.github.io/">Ningxin Zheng</a></b><sup>2</sup>,
 <b><a href="https://scholar.google.com/citations?user=ZMfk2F8AAAAJ&hl=zh-CN">Xin Liu</a></b><sup>2</sup>,
 <br>
-<b><a href="https://github.com/preminstrel">Harry Dong</a></b><sup>1</sup>,
-<b><a href="https://github.com/preminstrel">Yuejie Chi</a></b><sup>1</sup>,
-<b><a href="https://github.com/preminstrel">Beidi Chen</a></b><sup>1</sup>
+<b><a href="https://www.andrew.cmu.edu/user/harryd/">Harry Dong</a></b><sup>1</sup>,
+<b><a href="https://users.ece.cmu.edu/~yuejiec/">Yuejie Chi</a></b><sup>1</sup>,
+<b><a href="https://www.andrew.cmu.edu/user/beidic/">Beidi Chen</a></b><sup>1</sup>
 </div>
 <div align="center">
 <sup>1</sup>Carnegie Mellon University
