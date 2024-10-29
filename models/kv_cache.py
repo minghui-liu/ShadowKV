@@ -107,7 +107,7 @@ class KV_Cache:
         return self.kv_offset
 
 class ShadowKVCache:
-    """ShadowKV, only for accuracy measurement and understanding, not for efficiency, please refer to ShadowKV_CPU for efficient imp"""
+    """ShadowKV, only for accuracy measurement and understanding, not for efficiency, please refer to ShadowKV_CPU for the efficient implementation"""
     def __init__(self, 
         config :object,
         batch_size :int = 1,

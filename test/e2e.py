@@ -23,17 +23,13 @@ sys.path.append(root_dir)
 import torch
 import gc
 from termcolor import colored
+from argparse import ArgumentParser, Namespace
 
 from data.dataset import Dataset
 os.chdir(root_dir)
 
 from models import choose_model_class
 
-# model_name = "gradientai/Llama-3-8B-Instruct-Gradient-1048k"
-model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
-# model_name = "01-ai/Yi-9B-200K"
-# model_name = "THUDM/glm-4-9b-chat-1m"
-length = "122k"
 dataset_name = "ruler/qa_2"
 
 configs = {
@@ -119,41 +115,54 @@ configs = {
     }
 }
 
-min_prompt_len = configs[model_name][length]["min_prompt_len"]
-temperature = 0.6
-baseline_bsz = configs[model_name][length]["baseline_bsz"]
-shadowkv_bsz = configs[model_name][length]["shadowkv_bsz"]
-sparse_budget = configs[model_name][length]["sparse_budget"]
+
+def parse_args() -> Namespace:
+    p = ArgumentParser()
+    p.add_argument("--model_name", type=str, default="meta-llama/Meta-Llama-3.1-8B-Instruct", choices=["gradientai/Llama-3-8B-Instruct-Gradient-1048k", "meta-llama/Meta-Llama-3.1-8B-Instruct", "01-ai/Yi-9B-200K","THUDM/glm-4-9b-chat-1m"])
+    p.add_argument("--datalen", type=str, default="122k", choices=["60k", "122k", "244k"])
+
+    return p.parse_args()
+
+if __name__ == '__main__':
+
+    args = parse_args()
+
+    model_name = args.model_name
+    length = args.datalen
+
+    min_prompt_len = configs[model_name][length]["min_prompt_len"]
+    temperature = 0.6
+    baseline_bsz = configs[model_name][length]["baseline_bsz"]
+    shadowkv_bsz = configs[model_name][length]["shadowkv_bsz"]
+    sparse_budget = configs[model_name][length]["sparse_budget"]
 
 
-##################### Baseline #####################
-LLM = choose_model_class(model_name)
-llm = LLM(model_name=model_name, device='cuda:0',  batch_size=baseline_bsz, max_length=min_prompt_len, attn_mode='full_cpu', sparse_budget=sparse_budget)
-dataset = Dataset(dataset_name, llm.tokenizer, 256*1024, 20)
+    ##################### Baseline #####################
+    LLM = choose_model_class(model_name)
+    llm = LLM(model_name=model_name, device='cuda:0',  batch_size=baseline_bsz, max_length=min_prompt_len, attn_mode='full', sparse_budget=sparse_budget)
+    dataset = Dataset(dataset_name, llm.tokenizer, 256*1024, 20)
 
-input_ids = torch.cat([dataset[i][0][:, :min_prompt_len] for i in range(llm.batch_size)], dim=0)
+    input_ids = torch.cat([dataset[i][0][:, :min_prompt_len] for i in range(llm.batch_size)], dim=0)
 
-assert input_ids.shape[-1] == min_prompt_len
+    assert input_ids.shape[-1] == min_prompt_len
 
-texts, throughput_baseline = llm.batch_generate(input_ids.to(llm.device), gen_len=100, benchmark=True, temperature=temperature)
-print(texts)
-print(colored(f"[Baseline] Throughput: {throughput_baseline} tokens/s", 'red'))
+    _, throughput_baseline = llm.batch_generate(input_ids.to(llm.device), gen_len=100, benchmark=True, temperature=temperature)
+    print(colored(f"[Baseline] Throughput: {throughput_baseline} tokens/s", 'red'))
 
-del llm.kv_cache
-del llm
-gc.collect()
-torch.cuda.empty_cache()
-torch.cuda.reset_peak_memory_stats()
-torch.cuda.synchronize()
+    del llm.kv_cache
+    del llm
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats()
+    torch.cuda.synchronize()
 
-##################### ShadowKV #####################
+    ##################### ShadowKV #####################
 
-llm = LLM(model_name=model_name, device='cuda:0',  batch_size=shadowkv_bsz, max_length=min_prompt_len, attn_mode='shadowkv_cpu', sparse_budget=sparse_budget)
-dataset = Dataset(dataset_name, llm.tokenizer, 256*1024, 100)
+    llm = LLM(model_name=model_name, device='cuda:0',  batch_size=shadowkv_bsz, max_length=min_prompt_len, attn_mode='shadowkv_cpu', sparse_budget=sparse_budget)
+    dataset = Dataset(dataset_name, llm.tokenizer, 256*1024, 100)
 
-input_ids = torch.cat([dataset[i][0][:, :min_prompt_len] for i in range(llm.batch_size)], dim=0)
-texts, throughput_shadowkv = llm.batch_generate(input_ids.to(llm.device), gen_len=100, benchmark=True, temperature=temperature)
-print(texts)
-print(colored(f"[ShadowKV] Throughput: {throughput_shadowkv} tokens/s", 'red'))
-
-print(colored(f"Speedup: {throughput_shadowkv / throughput_baseline:.2f}x", 'red'))
+    input_ids = torch.cat([dataset[i][0][:, :min_prompt_len] for i in range(llm.batch_size)], dim=0)
+    _, throughput_shadowkv = llm.batch_generate(input_ids.to(llm.device), gen_len=100, benchmark=True, temperature=temperature)
+    print(colored(f"[ShadowKV] Throughput: {throughput_shadowkv} tokens/s", 'red'))
+    
+    print(colored(f"Speedup: {throughput_shadowkv / throughput_baseline:.2f}x", 'red'))

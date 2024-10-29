@@ -16,11 +16,11 @@
 ################################################################################
 
 accelerate
-datasets==2.19.2
+datasets
 gcsfs
 matplotlib
 numpy==1.23.2
-pandas==2.2.2
+pandas
 safetensors
 scikit_learn
 scipy
@@ -31,7 +31,7 @@ fuzzywuzzy
 torch==2.3.1
 tqdm
 transformers==4.43.1
-huggingface_hub
+huggingface_hub==0.23.3
 wandb
 sentencepiece
 protobuf
@@ -49,3 +49,4 @@ nltk==3.8.1
 evaluate
 vllm==0.5.3.post1
 rouge_score
+minference
