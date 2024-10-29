@@ -20,7 +20,7 @@
 <sup>2</sup>ByteDance
 </div>
 <div align="center">
-[<a href="XXXX">Paper</a>] | [<a href="XXXX">Blog</a>]
+[<a href="XXXX">Paper</a>] | [<a href="https://bytedance.github.io/ShadowKV">Blog</a>]
 </div>
 <br>
 
