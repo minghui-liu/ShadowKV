@@ -26,7 +26,6 @@ from transformers.models.llama.modeling_llama import LlamaDecoderLayer
 transformers.logging.set_verbosity_error()
 
 import vllm
-from minference.configs.model2path import MODEL2PATH
 
 from .tensor_op import layer_norm, apply_rotary_pos_emb, apply_rotary_pos_emb_single, apply_rotary_pos_emb_cuda
 from .prompt_template import Templates, Chat_Templates, Prefix_Templates
@@ -123,6 +122,7 @@ class Llama(LLM):
 
         if self.minference:
             import json
+            from minference.configs.model2path import MODEL2PATH
             self.minference_parttern = []
             for layer_idx in range(self.num_layers):
                 self.minference_parttern.append({int(ii): jj for ii, jj in json.load(open(MODEL2PATH[self.model_name]))[layer_idx].items()})
@@ -137,10 +137,15 @@ class Llama(LLM):
     @torch.inference_mode()
     def apply_rotary_pos_emb_single(self, x: torch.Tensor, position_ids: torch.Tensor) -> torch.Tensor:
         return apply_rotary_pos_emb_cuda(x, self.cos_sin_cache, position_ids)
+        # cos = self.cos_sin_cache[:, :128]
+        # sin = self.cos_sin_cache[:, 128:]
+        # return apply_rotary_pos_emb_single(x, cos, sin, position_ids)
+    
 
     @torch.inference_mode()
     def apply_rotary_pos_emb(self, q: torch.Tensor, k: torch.Tensor, position_ids: torch.Tensor) -> torch.Tensor:
-        vllm._custom_ops.rotary_embedding(position_ids, q, k, 128, self.cos_sin_cache, True)
+        # vllm._custom_ops.rotary_embedding(position_ids, q, k, 128, self.cos_sin_cache, True)
+        torch.ops._C.rotary_embedding(position_ids, q, k, 128, self.cos_sin_cache, True)
         bsz = q.shape[0]
         q = q.view(bsz, -1, self.num_heads, self.head_dim).transpose(1, 2)
         k = k.view(bsz, -1, self.num_key_value_heads, self.head_dim).transpose(1, 2)
@@ -152,12 +157,20 @@ class Llama(LLM):
         self.lm_head = hf_model.lm_head.weight.detach().to(self.device)
         self.norm_weight = hf_model.model.norm.weight.detach().to(self.device)
         self.norm_variance_epsilon = hf_model.model.norm.variance_epsilon
+        # try:
+        #     cos_cache = hf_model.model.layers[0].self_attn.rotary_emb.cos_cached[:self.max_length+1024].to(self.device).to(self.dtype)
+        #     sin_cache = hf_model.model.layers[0].self_attn.rotary_emb.sin_cached[:self.max_length+1024].to(self.device).to(self.dtype)
+        # except:
+        #     cos_cache, sin_cache = self._set_cos_sin_cache(hf_model.model.layers[0].self_attn.rotary_emb.inv_freq.to(self.device))
+        # self.cos_sin_cache = torch.cat((cos_cache[:, :64], sin_cache[:, :64]), dim=-1)
+
         try:
-            cos_cache = hf_model.model.layers[0].self_attn.rotary_emb.cos_cached[:self.max_length+1024].to(self.device).to(self.dtype)
-            sin_cache = hf_model.model.layers[0].self_attn.rotary_emb.sin_cached[:self.max_length+1024].to(self.device).to(self.dtype)
+            cos_cache = hf_model.model.rotary_emb.cos_cached[:self.max_length+1024].to(self.device).to(self.dtype)
+            sin_cache = hf_model.model.rotary_emb.sin_cached[:self.max_length+1024].to(self.device).to(self.dtype)
         except:
-            cos_cache, sin_cache = self._set_cos_sin_cache(hf_model.model.layers[0].self_attn.rotary_emb.inv_freq.to(self.device))
+            cos_cache, sin_cache = self._set_cos_sin_cache(hf_model.model.rotary_emb.inv_freq.to(self.device))
         self.cos_sin_cache = torch.cat((cos_cache[:, :64], sin_cache[:, :64]), dim=-1)
+        # self.cos_sin_cache = torch.cat((cos_cache, sin_cache), dim=-1)
         
         del cos_cache, sin_cache
 
@@ -202,8 +215,9 @@ class Llama(LLM):
         d = hidden_states.shape[-1] // 2
         output_shape = (hidden_states.shape[:-1] + (d, ))
         out = torch.empty(output_shape, dtype=hidden_states.dtype, device=hidden_states.device)
-        vllm._custom_ops.silu_and_mul(out, hidden_states)
-        
+        # vllm._custom_ops.silu_and_mul(out, hidden_states)
+        torch.ops._C.silu_and_mul(out, hidden_states)
+
         hidden_states = F.linear(out, buffer.down_proj)
         hidden_states = residual + hidden_states
         return hidden_states

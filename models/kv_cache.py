@@ -20,7 +20,6 @@ import math
 import gc
 from torch import nn
 from models.tensor_op import batch_gather_gemm_rotary_pos_emb_cuda
-from kernels import shadowkv
 
 class KV_Cache:
     """Full Attention"""
@@ -614,6 +613,8 @@ class ShadowKVCache_CPU:
 
     ##### Decoding #####
     def get_retrieval_position_ids(self, layer_idx, query_states):
+        from kernels import shadowkv
+
         # self.k_landmark[layer_idx][:, :, :self.chunks] is [bsz, 8, chunks, head_dim]
         # chunk_attn: [bsz, 32, window_size, chunks]
         self.incoming_q_len = query_states.shape[-2] # 1
@@ -646,6 +647,8 @@ class ShadowKVCache_CPU:
 
     def get_value_cache(self, layer_idx, position_ids):
 
+        from kernels import shadowkv
+
         shadowkv.gather_copy_with_offsets(self.v_cache_cpu[layer_idx], self.v_cache_buffer[layer_idx], self.temp, self.offsets, self.cnts, self.signals, self.batch_size, self.num_key_value_heads, int(self.max_ctx_chunks_len*self.head_dim), int(self.sparse_budget*self.head_dim), self.kernel_offset, self.kernel_stride, self.select_sets)
 
         gen_offset = self.gen_offset if layer_idx == self.num_layers - 1 else self.gen_offset + self.incoming_q_len
@@ -653,6 +656,8 @@ class ShadowKVCache_CPU:
         return self.v_cache_buffer[layer_idx][:, :, :self.sparse_end + gen_offset]
 
     def get_key_cache(self, layer_idx, position_ids, rope_func, cos_sin_cache):
+
+        from kernels import shadowkv
 
         # gather key cache and rope them
         u = self.U[layer_idx] # [bsz, 128k, rank]
